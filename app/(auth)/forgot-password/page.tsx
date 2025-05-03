@@ -1,46 +1,53 @@
-"use client"
+"use client";
 
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import * as z from "zod"
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import Link from "next/link"
-import { useState } from "react"
-import api from "@/lib/api"
-import toast from "react-hot-toast"
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { useState } from "react";
+import api from "@/lib/api";
+import toast from "react-hot-toast";
 
 const formSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
-})
+});
 
 export default function ForgotPasswordPage() {
-  const [isLoading, setIsLoading] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
+  const [isLoading, setIsLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       email: "",
     },
-  })
+  });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-      setIsLoading(true)
+      setIsLoading(true);
 
       // Call the forgot password API
-      await api.post("/auth/forgot-password", { email: values.email })
-      toast.success("Password reset link has been sent to your email")
-      setSubmitted(true)
+      await api.post("/auth/forgot-password", { email: values.email });
+      toast.success("Password reset link has been sent to your email");
+      setSubmitted(true);
     } catch (error: any) {
-      const errorMessage = error || "Failed to send reset link"
-      toast.error(errorMessage)
-      form.setError("email", { message: errorMessage })
-      console.error("Forgot password error:", error)
+      const errorMessage = error || "Failed to send reset link";
+      toast.error(errorMessage);
+      form.setError("email", { message: errorMessage });
+      console.error("Forgot password error:", error);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 
@@ -61,16 +68,25 @@ export default function ForgotPasswordPage() {
               <div className="mb-4 p-2 bg-green-50 text-green-800 rounded-md">
                 Password reset link has been sent to your email.
               </div>
-              <p className="mb-4">Please check your inbox and follow the instructions to reset your password.</p>
+              <p className="mb-4">
+                Please check your inbox and follow the instructions to reset
+                your password.
+              </p>
               <Link href="/login">
-                <Button className="w-full rounded-md py-6">Back to Login</Button>
+                <Button className="w-full rounded-md py-6">
+                  Back to Login
+                </Button>
               </Link>
             </div>
           ) : (
             <Form>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                className="space-y-6"
+              >
                 <p className="mb-6 text-muted-foreground text-sm">
-                  Enter your email address and we'll send you a link to reset your password.
+                  Enter your email address and we'll send you a link to reset
+                  your password.
                 </p>
 
                 <FormField
@@ -80,14 +96,22 @@ export default function ForgotPasswordPage() {
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter your email" {...field} className="py-2 bg-[#f1f5f9] border-0" />
+                        <Input
+                          placeholder="Enter your email"
+                          {...field}
+                          className="py-2 bg-[#f1f5f9] border-0"
+                        />
                       </FormControl>
                       <FormMessage className="text-red-500" />
                     </FormItem>
                   )}
                 />
 
-                <Button type="submit" className="w-full rounded-md py-6 mt-4" disabled={isLoading}>
+                <Button
+                  type="submit"
+                  className="w-full rounded-md py-6 mt-4"
+                  disabled={isLoading}
+                >
                   {isLoading ? "Sending..." : "Send Reset Link"}
                 </Button>
               </form>
@@ -97,7 +121,10 @@ export default function ForgotPasswordPage() {
           <div className="text-center mt-6">
             <p>
               Remember your password?{" "}
-              <Link href="/login" className="font-medium text-black hover:underline">
+              <Link
+                href="/login"
+                className="font-medium text-black hover:underline"
+              >
                 Back to Login
               </Link>
             </p>
@@ -105,5 +132,5 @@ export default function ForgotPasswordPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

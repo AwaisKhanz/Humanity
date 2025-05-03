@@ -1,37 +1,38 @@
-import { AnswerDetail } from "@/components/answers/answer-detail";
-import { ReviewCard } from "@/components/reviews/review-card";
-import { notFound } from "next/navigation";
+import { AnswerDetail } from "@/components/answers/answer-detail"
+import { ReviewCard } from "@/components/reviews/review-card"
+import { notFound } from "next/navigation"
 
 interface AnswerPageProps {
   params: {
-    id: string;
-    answerId: string;
-  };
+    id: string
+    answerId: string
+  }
 }
 
 export default async function AnswerPage({ params }: AnswerPageProps) {
   // Fetch question data
-  const questionResponse = await fetch(`/api/questions/${params.id}`, {
-    cache: "no-store",
-  });
+  const questionResponse = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"}/api/questions/${params.id}`,
+    { cache: "no-store" },
+  )
 
   if (!questionResponse.ok) {
-    notFound();
+    notFound()
   }
 
-  const question = await questionResponse.json();
+  const question = await questionResponse.json()
 
   // Fetch answer data
   const answerResponse = await fetch(
-    `/api/questions/${params.id}/answers/${params.answerId}`,
-    { cache: "no-store" }
-  );
+    `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"}/api/questions/${params.id}/answers/${params.answerId}`,
+    { cache: "no-store" },
+  )
 
   if (!answerResponse.ok) {
-    notFound();
+    notFound()
   }
 
-  const answer = await answerResponse.json();
+  const answer = await answerResponse.json()
 
   // Mock related reviews data - in a real app, you would fetch this from an API
   const relatedReviews = [
@@ -49,15 +50,13 @@ export default async function AnswerPage({ params }: AnswerPageProps) {
       authorAvatarUrl: "/placeholder.svg?height=32&width=32",
       imageUrl: "/placeholder.svg?height=200&width=300",
     },
-  ];
+  ]
 
   // Format the author name
-  const authorName = answer.user
-    ? `${answer.user.firstName} ${answer.user.lastName}`
-    : "Anonymous";
+  const authorName = answer.user ? `${answer.user.firstName} ${answer.user.lastName}` : "Anonymous"
 
   // Get author location from profile
-  const authorLocation = answer.authorProfile?.countryOfResidence || "";
+  const authorLocation = answer.authorProfile?.countryOfResidence || ""
 
   return (
     <div className="container mx-auto py-12 px-4">
@@ -71,10 +70,7 @@ export default async function AnswerPage({ params }: AnswerPageProps) {
             authorName={authorName}
             authorLocation={authorLocation}
             authorSlug={answer.user?._id}
-            authorAvatarUrl={
-              answer.authorProfile?.imageUrl ||
-              "/placeholder.svg?height=80&width=80"
-            }
+            authorAvatarUrl={answer.authorProfile?.imageUrl || "/placeholder.svg?height=80&width=80"}
             content={answer.content}
           />
         </div>
@@ -94,5 +90,5 @@ export default async function AnswerPage({ params }: AnswerPageProps) {
         </div>
       </div>
     </div>
-  );
+  )
 }

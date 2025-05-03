@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
     // Generate token
     const token = generateToken(user);
 
-    // Set cookie
+    // Set cookie with proper settings for middleware access
     (await cookies()).set({
       name: "token",
       value: token,

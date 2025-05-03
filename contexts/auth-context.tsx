@@ -1,81 +1,99 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { createContext, useContext, useEffect, useState, useCallback } from "react"
-import { useRouter } from "next/navigation"
-import toast from "react-hot-toast"
+import type React from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+} from "react";
+import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 
 // User interface
 interface User {
-  _id: string
-  email: string
-  firstName: string
-  lastName: string
-  role: string
-  isAuthor: boolean
-  createdAt: string
-  updatedAt: string
+  _id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+  isAuthor: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // Author profile interface
 interface AuthorProfile {
-  _id: string
-  userId: string
-  preNominals?: string
-  middleInitials?: string
-  countryOfResidence: string
-  bio: string
-  links: string[]
-  imageUrl?: string
-  createdAt: string
-  updatedAt: string
+  _id: string;
+  userId: string;
+  preNominals?: string;
+  middleInitials?: string;
+  countryOfResidence: string;
+  bio: string;
+  links: string[];
+  imageUrl?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface AuthContextType {
-  user: User | null
-  authorProfile: AuthorProfile | null
-  loading: boolean
-  login: (email: string, password: string, redirectUrl: string | null) => Promise<void>
-  logout: () => Promise<void>
-  fetchProfile: () => Promise<void>
+  user: User | null;
+  authorProfile: AuthorProfile | null;
+  loading: boolean;
+  login: (
+    email: string,
+    password: string,
+    redirectUrl: string | null
+  ) => Promise<void>;
+  logout: () => Promise<void>;
+  fetchProfile: () => Promise<void>;
 }
 
-export const AuthContext = createContext<AuthContextType | undefined>(undefined)
+export const AuthContext = createContext<AuthContextType | undefined>(
+  undefined
+);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [authorProfile, setAuthorProfile] = useState<AuthorProfile | null>(null)
-  const [loading, setLoading] = useState(true)
-  const router = useRouter()
+  const [user, setUser] = useState<User | null>(null);
+  const [authorProfile, setAuthorProfile] = useState<AuthorProfile | null>(
+    null
+  );
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   const fetchProfile = useCallback(async () => {
     try {
-      setLoading(true)
-      const response = await fetch("/api/auth/profile")
+      setLoading(true);
+      const response = await fetch("/api/auth/profile");
 
       if (!response.ok) {
-        setUser(null)
-        setAuthorProfile(null)
-        return
+        setUser(null);
+        setAuthorProfile(null);
+        return;
       }
 
-      const data = await response.json()
-      setUser(data.user)
-      setAuthorProfile(data.authorProfile)
+      const data = await response.json();
+      setUser(data.user);
+      setAuthorProfile(data.authorProfile);
     } catch (error) {
-      console.error("Error fetching profile:", error)
-      setUser(null)
-      setAuthorProfile(null)
+      console.error("Error fetching profile:", error);
+      setUser(null);
+      setAuthorProfile(null);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [])
+  }, []);
 
   useEffect(() => {
-    fetchProfile()
-  }, [fetchProfile])
+    fetchProfile();
+  }, [fetchProfile]);
 
-  const login = async (email: string, password: string, redirectUrl: string | null) => {
+  const login = async (
+    email: string,
+    password: string,
+    redirectUrl: string | null
+  ) => {
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
@@ -83,51 +101,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ email, password }),
-      })
+      });
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.message || "Login failed")
+        const error = await response.json();
+        throw new Error(error.message || "Login failed");
       }
 
-      const data = await response.json()
-      setUser(data.user)
+      const data = await response.json();
+      setUser(data.user);
 
-      toast.success("Login successful!")
+      toast.success("Login successful!");
 
       if (redirectUrl) {
-        router.push(redirectUrl)
-        return
+        router.push(redirectUrl);
+        return;
       }
 
       // Redirect based on user role
       if (data.user.role === "super_admin" || data.user.role === "admin") {
-        router.push("/admin")
+        router.push("/admin");
       } else {
-        router.push("/")
+        router.push("/");
       }
     } catch (error: any) {
-      const errorMessage = error.message || "Invalid email or password"
-      toast.error(errorMessage)
-      throw error
+      const errorMessage = error.message || "Invalid email or password";
+      toast.error(errorMessage);
+      throw error;
     }
-  }
+  };
 
   const logout = async () => {
     try {
       await fetch("/api/auth/logout", {
         method: "POST",
-      })
+      });
 
-      setUser(null)
-      setAuthorProfile(null)
-      toast.success("Logged out successfully")
-      router.push("/login")
+      setUser(null);
+      setAuthorProfile(null);
+      toast.success("Logged out successfully");
+      router.push("/login");
     } catch (error) {
-      console.error("Logout error:", error)
-      toast.error("Failed to logout")
+      console.error("Logout error:", error);
+      toast.error("Failed to logout");
     }
-  }
+  };
 
   return (
     <AuthContext.Provider
@@ -142,13 +160,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     >
       {children}
     </AuthContext.Provider>
-  )
+  );
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext)
+  const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider")
+    throw new Error("useAuth must be used within an AuthProvider");
   }
-  return context
+  return context;
 }

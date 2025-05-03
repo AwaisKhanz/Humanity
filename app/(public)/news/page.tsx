@@ -1,6 +1,6 @@
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { routes } from "../routes"
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { routes } from "../../routes";
 
 export default function NewsPage() {
   return (
@@ -9,8 +9,10 @@ export default function NewsPage() {
         <div className="bg-white rounded-lg p-8 mb-8">
           <h1 className="text-4xl font-bold mb-6">News</h1>
           <p className="text-gray-600 mb-4">
-            Fermentum, ipsum in lacinia tempus, lorem neque tempus nisi, id porta quam quased tortor vitae sem finibus
-            pharetra vitae eget sem. Suspendisse ipsum justo, lobortis auctor sodales in, imperdiet vitae ante.
+            Fermentum, ipsum in lacinia tempus, lorem neque tempus nisi, id
+            porta quam quased tortor vitae sem finibus pharetra vitae eget sem.
+            Suspendisse ipsum justo, lobortis auctor sodales in, imperdiet vitae
+            ante.
           </p>
           <div className="mt-6">
             <Link href={routes.news.posts}>
@@ -20,5 +22,5 @@ export default function NewsPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

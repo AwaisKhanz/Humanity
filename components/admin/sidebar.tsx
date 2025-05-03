@@ -1,17 +1,18 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { cn } from "@/lib/utils"
-import { useAuth } from "@/contexts/auth-context"
-import { UserRole } from "@/lib/db-service"
-import { BarChart3, FileQuestion, Home, LayoutDashboard, LogOut, Settings, Users } from "lucide-react"
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Home, Users, FileQuestion, Settings, LogOut } from "lucide-react";
+import { useAuth } from "@/contexts/auth-context";
+import { UserRole } from "@/lib/types"; // Import from types.ts instead of db-service.ts
+import { cn } from "@/lib/utils";
+import { BarChart3, LayoutDashboard } from "lucide-react";
 
 export function Sidebar() {
-  const pathname = usePathname()
-  const { user, logout } = useAuth()
+  const pathname = usePathname();
+  const { user, logout } = useAuth();
 
-  const isSuperAdmin = user?.role === UserRole.SUPER_ADMIN
+  const isSuperAdmin = user?.role === UserRole.SUPER_ADMIN;
 
   const menuItems = [
     {
@@ -41,7 +42,7 @@ export function Sidebar() {
       href: "/admin/settings",
       icon: Settings,
     },
-  ]
+  ];
 
   return (
     <div className="w-64 min-h-screen bg-gray-900 text-white p-4">
@@ -56,10 +57,11 @@ export function Sidebar() {
         {menuItems.map((item) => {
           // Skip items that are for super admins only if the user is not a super admin
           if (item.superAdminOnly && !isSuperAdmin) {
-            return null
+            return null;
           }
 
-          const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
+          const isActive =
+            pathname === item.href || pathname.startsWith(`${item.href}/`);
 
           return (
             <Link
@@ -67,13 +69,15 @@ export function Sidebar() {
               href={item.href}
               className={cn(
                 "flex items-center gap-3 px-3 py-2 rounded-md transition-colors",
-                isActive ? "bg-gray-800 text-white" : "text-gray-400 hover:text-white hover:bg-gray-800",
+                isActive
+                  ? "bg-gray-800 text-white"
+                  : "text-gray-400 hover:text-white hover:bg-gray-800"
               )}
             >
               <item.icon className="h-5 w-5" />
               <span>{item.title}</span>
             </Link>
-          )
+          );
         })}
       </nav>
 
@@ -96,5 +100,5 @@ export function Sidebar() {
         </div>
       </div>
     </div>
-  )
+  );
 }

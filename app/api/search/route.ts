@@ -1,214 +1,242 @@
-import { type NextRequest, NextResponse } from "next/server"
-import clientPromise from "@/lib/mongodb"
-import { JobStatus } from "@/lib/db-service"
+import { type NextRequest, NextResponse } from "next/server";
+import { getMongoDb } from "@/lib/mongodb";
 
-// Define search result types
-type SearchResultType = "question" | "answer" | "author"
-
-// Define search result interface
-interface SearchResult {
-  id: string
-  type: SearchResultType
-  title: string
-  description: string
-  url: string
-  imageUrl?: string
-  score: number
-  createdAt: Date
-  metadata?: Record<string, any>
-}
-
-export async function GET(req: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
-    // Get search query from URL
-    const { searchParams } = new URL(req.url)
-    const query = searchParams.get("q")
-    const typeFilter = searchParams.get("type") as SearchResultType | null
-    const page = Number.parseInt(searchParams.get("page") || "1")
-    const limit = Number.parseInt(searchParams.get("limit") || "10")
-    const skip = (page - 1) * limit
+    const searchParams = request.nextUrl.searchParams;
+    const query = searchParams.get("q") || "";
+    const type = searchParams.get("type") || "";
+    const page = Number.parseInt(searchParams.get("page") || "1");
+    const limit = Number.parseInt(searchParams.get("limit") || "10");
+    const skip = (page - 1) * limit;
 
-    // Validate query
-    if (!query || query.trim().length < 2) {
+    if (!query) {
       return NextResponse.json({
         results: [],
         total: 0,
         page,
         limit,
-        message: "Search query must be at least 2 characters",
-      })
+        totalPages: 0,
+      });
     }
 
-    const client = await clientPromise
-    const db = client.db("humanity")
-    const results: SearchResult[] = []
-    let total = 0
+    const db = await getMongoDb();
+    const results = [];
+    let total = 0;
+    let totalPages = 0;
 
-    // Build filter based on type
-    const typeFilters: SearchResultType[] = typeFilter ? [typeFilter] : ["question", "answer", "author"]
+    // Create a text search query
+    const textSearchQuery = { $text: { $search: query } };
 
-    // Search questions if included in type filter
-    if (typeFilters.includes("question")) {
-      const questions = await db
-        .collection("questions")
-        .find({ $text: { $search: query } }, { score: { $meta: "textScore" } })
-        .sort({ score: { $meta: "textScore" } })
-        .toArray()
+    // Helper function to check if a collection exists
+    async function collectionExists(collectionName: string): Promise<boolean> {
+      const collections = await db.listCollections().toArray();
+      return collections.some((col) => col.name === collectionName);
+    }
 
-      questions.forEach((question) => {
-        results.push({
-          id: question._id.toString(),
+    // Search questions if no type filter or type is "question"
+    if (!type || type === "question") {
+      let questions = [];
+      if (await collectionExists("questions")) {
+        questions = await db
+          .collection("questions")
+          .find(textSearchQuery)
+          .project({
+            _id: 1,
+            title: 1,
+            description: 1,
+            createdAt: 1,
+            score: { $meta: "textScore" },
+          })
+          .sort({ score: { $meta: "textScore" } })
+          .skip(type ? skip : 0)
+          .limit(type ? limit : 5)
+          .toArray();
+      } else {
+        console.warn("Collection 'questions' does not exist.");
+      }
+
+      const questionsCount =
+        type === "question" && questions.length > 0
+          ? await db.collection("questions").countDocuments(textSearchQuery)
+          : questions.length;
+
+      results.push(
+        ...questions.map((q) => ({
+          id: q._id.toString(),
           type: "question",
-          title: question.title,
-          description: question.description.substring(0, 200) + (question.description.length > 200 ? "..." : ""),
-          url: `/questions/${question._id}`,
-          imageUrl: question.imageUrl,
-          score: question.score,
-          createdAt: question.createdAt,
+          title: q.title,
+          description: q.description || "",
+          url: `/questions/${q._id}`,
+          score: q.score,
+          createdAt: q.createdAt,
+        }))
+      );
+
+      if (type === "question") {
+        total = questionsCount;
+        totalPages = Math.ceil(total / limit);
+      }
+    }
+
+    // Search answers if no type filter or type is "answer"
+    if (!type || type === "answer") {
+      let answers = [];
+      if (await collectionExists("answers")) {
+        answers = await db
+          .collection("answers")
+          .aggregate([
+            { $match: textSearchQuery },
+            {
+              $lookup: {
+                from: "questions",
+                localField: "questionId",
+                foreignField: "_id",
+                as: "question",
+              },
+            },
+            {
+              $unwind: { path: "$question", preserveNullAndEmptyArrays: true },
+            },
+            {
+              $project: {
+                _id: 1,
+                title: 1,
+                summary: 1,
+                content: 1,
+                createdAt: 1,
+                questionId: 1,
+                questionTitle: "$question.title",
+                score: { $meta: "textScore" },
+              },
+            },
+            { $sort: { score: { $meta: "textScore" } } },
+            { $skip: type ? skip : 0 },
+            { $limit: type ? limit : 5 },
+          ])
+          .toArray();
+      } else {
+        console.warn("Collection 'answers' does not exist.");
+      }
+
+      const answersCount =
+        type === "answer" && answers.length > 0
+          ? await db.collection("answers").countDocuments(textSearchQuery)
+          : answers.length;
+
+      results.push(
+        ...answers.map((a) => ({
+          id: a._id.toString(),
+          type: "answer",
+          title: a.title || "Answer",
+          description: a.summary || a.content.substring(0, 150) + "...",
+          url: `/questions/${a.questionId}/answers/${a._id}`,
+          score: a.score,
+          createdAt: a.createdAt,
           metadata: {
-            number: question.number,
+            questionTitle: a.questionTitle,
           },
-        })
-      })
+        }))
+      );
 
-      total += questions.length
+      if (type === "answer") {
+        total = answersCount;
+        totalPages = Math.ceil(total / limit);
+      }
     }
 
-    // Search answers if included in type filter
-    if (typeFilters.includes("answer")) {
-      const answers = await db
-        .collection("answers")
-        .find(
-          {
-            $text: { $search: query },
-            status: JobStatus.APPROVED,
-          },
-          { score: { $meta: "textScore" } },
-        )
-        .sort({ score: { $meta: "textScore" } })
-        .toArray()
-
-      // Get question details for each answer
-      const answerResults = await Promise.all(
-        answers.map(async (answer) => {
-          const question = await db.collection("questions").findOne({ _id: answer.questionId })
-          const user = await db.collection("users").findOne({ _id: answer.userId })
-
-          return {
-            id: answer._id.toString(),
-            type: "answer",
-            title: answer.title || (question ? question.title : "Answer"),
-            description: answer.summary,
-            url: `/questions/${answer.questionId}/answers/${answer._id}`,
-            score: answer.score,
-            createdAt: answer.createdAt,
-            metadata: {
-              questionId: answer.questionId.toString(),
-              questionTitle: question ? question.title : null,
-              authorName: user ? `${user.firstName} ${user.lastName}` : "Unknown Author",
+    // Search author profiles if no type filter or type is "author"
+    if (!type || type === "author") {
+      let authorProfiles = [];
+      if (await collectionExists("author_profiles")) {
+        authorProfiles = await db
+          .collection("author_profiles")
+          .aggregate([
+            { $match: textSearchQuery },
+            {
+              $lookup: {
+                from: "users",
+                localField: "userId",
+                foreignField: "_id",
+                as: "user",
+              },
             },
-          } as SearchResult
-        }),
-      )
+            { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
+            {
+              $project: {
+                _id: 1,
+                bio: 1,
+                expertise: 1,
+                countryOfResidence: 1,
+                profileImage: 1,
+                createdAt: 1,
+                firstName: "$user.firstName",
+                lastName: "$user.lastName",
+                slug: 1,
+                score: { $meta: "textScore" },
+              },
+            },
+            { $sort: { score: { $meta: "textScore" } } },
+            { $skip: type ? skip : 0 },
+            { $limit: type ? limit : 5 },
+          ])
+          .toArray();
+      } else {
+        console.warn("Collection 'author_profiles' does not exist.");
+      }
 
-      results.push(...answerResults)
-      total += answers.length
+      const authorsCount =
+        type === "author" && authorProfiles.length > 0
+          ? await db
+              .collection("author_profiles")
+              .countDocuments(textSearchQuery)
+          : authorProfiles.length;
+
+      results.push(
+        ...authorProfiles.map((a) => ({
+          id: a._id.toString(),
+          type: "author",
+          title: `${a.firstName} ${a.lastName}`,
+          description: a.bio || "",
+          url: `/authors/${a.slug || a._id}`,
+          imageUrl: a.profileImage,
+          score: a.score,
+          createdAt: a.createdAt,
+          metadata: {
+            countryOfResidence: a.countryOfResidence,
+            expertise: a.expertise,
+          },
+        }))
+      );
+
+      if (type === "author") {
+        total = authorsCount;
+        totalPages = Math.ceil(total / limit);
+      }
     }
 
-    // Search authors if included in type filter
-    if (typeFilters.includes("author")) {
-      // First search author profiles
-      const authorProfiles = await db
-        .collection("author_profiles")
-        .find({ $text: { $search: query } }, { score: { $meta: "textScore" } })
-        .sort({ score: { $meta: "textScore" } })
-        .toArray()
-
-      // Get user details for each author profile
-      const authorProfileResults = await Promise.all(
-        authorProfiles.map(async (profile) => {
-          const user = await db.collection("users").findOne({ _id: profile.userId })
-          if (!user) return null
-
-          return {
-            id: user._id.toString(),
-            type: "author",
-            title: `${user.firstName} ${user.lastName}`,
-            description: profile.bio.substring(0, 200) + (profile.bio.length > 200 ? "..." : ""),
-            url: `/authors/${user._id}`,
-            imageUrl: profile.imageUrl,
-            score: profile.score,
-            createdAt: profile.createdAt,
-            metadata: {
-              countryOfResidence: profile.countryOfResidence,
-            },
-          } as SearchResult
-        }),
-      )
-
-      // Filter out null results
-      results.push(...(authorProfileResults.filter(Boolean) as SearchResult[]))
-      total += authorProfileResults.filter(Boolean).length
-
-      // Then search users with isAuthor=true
-      const authors = await db
-        .collection("users")
-        .find(
-          {
-            $text: { $search: query },
-            isAuthor: true,
-          },
-          { score: { $meta: "textScore" } },
-        )
-        .sort({ score: { $meta: "textScore" } })
-        .toArray()
-
-      // Get author profiles for each user
-      const authorResults = await Promise.all(
-        authors.map(async (author) => {
-          const profile = await db.collection("author_profiles").findOne({ userId: author._id })
-          if (!profile) return null
-
-          // Check if this author was already added from the profile search
-          const isDuplicate = authorProfileResults.some((result) => result && result.id === author._id.toString())
-          if (isDuplicate) return null
-
-          return {
-            id: author._id.toString(),
-            type: "author",
-            title: `${author.firstName} ${author.lastName}`,
-            description: profile.bio.substring(0, 200) + (profile.bio.length > 200 ? "..." : ""),
-            url: `/authors/${author._id}`,
-            imageUrl: profile.imageUrl,
-            score: author.score,
-            createdAt: author.createdAt,
-            metadata: {
-              countryOfResidence: profile.countryOfResidence,
-            },
-          } as SearchResult
-        }),
-      )
-
-      // Filter out null results
-      results.push(...(authorResults.filter(Boolean) as SearchResult[]))
-      total += authorResults.filter(Boolean).length
+    // If no type filter, calculate total and sort by score
+    if (!type) {
+      results.sort((a, b) => b.score - a.score);
+      total = results.length;
+      totalPages = 1;
     }
-
-    // Sort results by score
-    results.sort((a, b) => b.score - a.score)
-
-    // Apply pagination
-    const paginatedResults = results.slice(skip, skip + limit)
 
     return NextResponse.json({
-      results: paginatedResults,
+      results: results.slice(
+        type ? 0 : skip,
+        type ? results.length : skip + limit
+      ),
       total,
       page,
       limit,
-      totalPages: Math.ceil(total / limit),
-    })
+      totalPages,
+    });
   } catch (error) {
-    console.error("Search error:", error)
-    return NextResponse.json({ message: "An error occurred during search" }, { status: 500 })
+    console.error("Search error:", error);
+    return NextResponse.json(
+      { error: "Failed to perform search" },
+      { status: 500 }
+    );
   }
 }

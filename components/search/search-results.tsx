@@ -45,9 +45,16 @@ async function getSearchResults(
     params.append("type", type);
   }
 
-  const res = await fetch(`/api/search?${params.toString()}`, {
-    cache: "no-store",
-  });
+  const res = await fetch(
+    `${
+      process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
+    }/api/search?${params.toString()}`,
+    {
+      cache: "no-store",
+    }
+  );
+
+  console.log(res);
 
   if (!res.ok) {
     throw new Error("Failed to fetch search results");

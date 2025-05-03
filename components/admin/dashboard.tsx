@@ -1,12 +1,26 @@
-"use client"
+"use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { JobList } from "@/components/admin/job-list"
-import Link from "next/link"
-import { useAuth } from "@/contexts/auth-context"
-import { UserRole } from "@/lib/db-service"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import Link from "next/link";
+import { useAuth } from "@/contexts/auth-context";
+import { UserRole } from "@/lib/types"; // Import from types.ts
+import type { Job } from "@/lib/types";
+import { JobListClient } from "./job-list";
 
-export default function AdminDashboard() {
+interface DashboardClientProps {
+  jobs: Job[];
+}
+
+export function DashboardClient({ jobs }: DashboardClientProps) {
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === UserRole.SUPER_ADMIN;
+
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Admin Dashboard</h1>
@@ -19,26 +33,28 @@ export default function AdminDashboard() {
           value="View Jobs"
         />
 
-        <DashboardCard
-          title="Questions"
-          description="Manage questions and create new ones"
-          href="/admin/questions"
-          value="Manage Questions"
-          superAdminOnly
-        />
+        {isSuperAdmin && (
+          <>
+            <DashboardCard
+              title="Questions"
+              description="Manage questions and create new ones"
+              href="/admin/questions"
+              value="Manage Questions"
+            />
 
-        <DashboardCard
-          title="Users"
-          description="View and manage user accounts"
-          href="/admin/users"
-          value="Manage Users"
-          superAdminOnly
-        />
+            <DashboardCard
+              title="Users"
+              description="View and manage user accounts"
+              href="/admin/users"
+              value="Manage Users"
+            />
+          </>
+        )}
       </div>
 
       <div className="mt-8">
         <h2 className="text-xl font-bold mb-4">Recent Jobs</h2>
-        <JobList limit={5} />
+        <JobListClient jobs={jobs} />
         <div className="mt-4 text-right">
           <Link href="/admin/jobs" className="text-blue-600 hover:underline">
             View all jobs →
@@ -46,7 +62,7 @@ export default function AdminDashboard() {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 function DashboardCard({
@@ -54,21 +70,12 @@ function DashboardCard({
   description,
   href,
   value,
-  superAdminOnly = false,
 }: {
-  title: string
-  description: string
-  href: string
-  value: string
-  superAdminOnly?: boolean
+  title: string;
+  description: string;
+  href: string;
+  value: string;
 }) {
-  const { user } = useAuth()
-
-  // If this card is for super admins only and the user is not a super admin, don't render it
-  if (superAdminOnly && user?.role !== UserRole.SUPER_ADMIN) {
-    return null
-  }
-
   return (
     <Card>
       <CardHeader>
@@ -84,5 +91,5 @@ function DashboardCard({
         </Link>
       </CardContent>
     </Card>
-  )
+  );
 }
