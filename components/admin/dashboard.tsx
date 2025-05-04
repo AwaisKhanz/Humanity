@@ -21,6 +21,8 @@ export function DashboardClient({ jobs }: DashboardClientProps) {
   const { user } = useAuth();
   const isSuperAdmin = user?.role === UserRole.SUPER_ADMIN;
 
+  console.log(jobs);
+
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Admin Dashboard</h1>
@@ -53,13 +55,15 @@ export function DashboardClient({ jobs }: DashboardClientProps) {
       </div>
 
       <div className="mt-8">
-        <h2 className="text-xl font-bold mb-4">Recent Jobs</h2>
-        <JobListClient jobs={jobs} />
-        <div className="mt-4 text-right">
-          <Link href="/admin/jobs" className="text-blue-600 hover:underline">
-            View all jobs →
-          </Link>
+        <div className=" flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold mb-4">Recent Jobs</h2>
+          <div className=" text-right">
+            <Link href="/admin/jobs" className="text-blue-600 hover:underline">
+              View all jobs →
+            </Link>
+          </div>
         </div>
+        <JobListClient jobs={jobs} />
       </div>
     </div>
   );

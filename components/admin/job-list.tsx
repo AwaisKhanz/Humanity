@@ -1,13 +1,20 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { MoreVertical, CheckCircle, XCircle, Eye } from "lucide-react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Job, JobStatus } from "@/lib/types";
+import { type Job, JobStatus } from "@/lib/types";
 import { updateJobStatus } from "@/lib/admin-actions";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ObjectId } from "mongodb";
 
 interface JobListClientProps {
   jobs: Job[];
@@ -15,15 +22,13 @@ interface JobListClientProps {
 }
 
 export function JobListClient({ jobs, limit }: JobListClientProps) {
-  const [activeJob, setActiveJob] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [jobsState, setJobsState] = useState<Job[]>(
     limit && jobs.length > limit ? jobs.slice(0, limit) : jobs
   );
-  const router = useRouter();
 
   async function handleUpdateJobStatus(
-    jobId: string,
+    jobId: string | ObjectId,
     status: JobStatus.APPROVED | JobStatus.REJECTED
   ) {
     try {
@@ -46,7 +51,6 @@ export function JobListClient({ jobs, limit }: JobListClientProps) {
       toast.error("Failed to update job status");
     } finally {
       setLoading(false);
-      setActiveJob(null);
     }
   }
 
@@ -103,9 +107,9 @@ export function JobListClient({ jobs, limit }: JobListClientProps) {
           </thead>
           <tbody className="divide-y divide-gray-200">
             {jobsState.map((job) => (
-              <tr key={job._id} className="hover:bg-gray-50">
+              <tr key={job.adminNo} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  {job._id?.slice(-6)}
+                  {typeof job._id === "string" && job._id?.slice(-6)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {job.adminNo}
@@ -135,65 +139,52 @@ export function JobListClient({ jobs, limit }: JobListClientProps) {
                   {formatDate(job.createdAt)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <div className="relative">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="rounded-full"
-                      onClick={() =>
-                        setActiveJob(activeJob === job._id ? null : job._id)
-                      }
-                      disabled={loading}
-                    >
-                      <MoreVertical className="h-5 w-5" />
-                    </Button>
-
-                    {activeJob === job._id && (
-                      <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10">
-                        <div className="py-1">
-                          <Link href={`/admin/jobs/${job._id}`}>
-                            <button className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left">
-                              <Eye className="h-4 w-4 mr-2" />
-                              View Details
-                            </button>
-                          </Link>
-                          {job.status === "pending" && (
-                            <>
-                              <button
-                                className="flex items-center px-4 py-2 text-sm text-green-600 hover:bg-gray-100 w-full text-left"
-                                onClick={() =>
-                                  job._id &&
-                                  handleUpdateJobStatus(
-                                    job._id,
-                                    JobStatus.APPROVED
-                                  )
-                                }
-                                disabled={loading}
-                              >
-                                <CheckCircle className="h-4 w-4 mr-2" />
-                                Approve
-                              </button>
-
-                              <button
-                                className="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-gray-100 w-full text-left"
-                                onClick={() =>
-                                  job._id &&
-                                  handleUpdateJobStatus(
-                                    job._id,
-                                    JobStatus.REJECTED
-                                  )
-                                }
-                                disabled={loading}
-                              >
-                                <XCircle className="h-4 w-4 mr-2" />
-                                Reject
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="rounded-full"
+                        disabled={loading}
+                      >
+                        <MoreVertical className="h-5 w-5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48 bg-white">
+                      <Link href={`/admin/jobs/${job._id}`} className="w-full">
+                        <DropdownMenuItem className="cursor-pointer">
+                          <Eye className="h-4 w-4 mr-2" />
+                          View Details
+                        </DropdownMenuItem>
+                      </Link>
+                      {job.status === "pending" && (
+                        <>
+                          <DropdownMenuItem
+                            className="text-green-600 cursor-pointer"
+                            onClick={() =>
+                              job._id &&
+                              handleUpdateJobStatus(job._id, JobStatus.APPROVED)
+                            }
+                            disabled={loading}
+                          >
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Approve
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-red-600 cursor-pointer"
+                            onClick={() =>
+                              job._id &&
+                              handleUpdateJobStatus(job._id, JobStatus.REJECTED)
+                            }
+                            disabled={loading}
+                          >
+                            <XCircle className="h-4 w-4 mr-2" />
+                            Reject
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </td>
               </tr>
             ))}

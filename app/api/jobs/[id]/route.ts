@@ -105,7 +105,9 @@ export async function PUT(
       switch (job.type) {
         case JobType.NEW_AUTHOR:
           // Update user to be an author
-          await dbService.updateUser(job.userId, { isAuthor: true });
+          await dbService.updateUser(new ObjectId(job.userId), {
+            isAuthor: true,
+          });
           break;
         case JobType.ANSWER_SUBMISSION:
           if (job.relatedId) {

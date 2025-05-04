@@ -1,3 +1,5 @@
+import { ObjectId } from "mongodb";
+
 // User roles enum
 export enum UserRole {
   USER = "user",
@@ -22,7 +24,7 @@ export enum JobStatus {
 
 // User interface
 export interface User {
-  _id: string;
+  _id: string | ObjectId;
   email: string;
   firstName: string;
   lastName: string;
@@ -34,11 +36,12 @@ export interface User {
 
 // Author profile interface
 export interface AuthorProfile {
-  _id: string;
-  userId: string;
+  _id: string | ObjectId;
+  userId: string | ObjectId;
   preNominals?: string;
   middleInitials?: string;
   countryOfResidence: string;
+  name: string;
   bio: string;
   links: string[];
   imageUrl?: string;
@@ -48,7 +51,7 @@ export interface AuthorProfile {
 
 // Question interface
 export interface Question {
-  _id: string;
+  _id: string | ObjectId;
   number: number;
   title: string;
   description: string;
@@ -62,8 +65,8 @@ export interface Question {
 // Answer interface
 export interface Answer {
   _id: string;
-  questionId: string;
-  userId: string;
+  questionId: string | ObjectId;
+  userId: string | ObjectId;
   title?: string;
   summary: string;
   content: string;
@@ -76,11 +79,11 @@ export interface Answer {
 
 // Job interface
 export interface Job {
-  _id: string;
+  _id: string | ObjectId;
   adminNo: string;
   type: JobType;
   status: JobStatus;
-  userId: string;
+  userId: string | ObjectId;
   relatedId?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -93,8 +96,8 @@ export interface Job {
 
 // Like interface
 export interface Like {
-  _id: string;
-  userId: string;
-  answerId: string;
+  _id: string | ObjectId;
+  userId: string | ObjectId;
+  answerId: string | ObjectId;
   createdAt: Date;
 }

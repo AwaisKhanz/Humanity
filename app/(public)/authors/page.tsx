@@ -1,4 +1,5 @@
 import { AuthorsSearch } from "@/components/authors/authors-search";
+import { getAllAuthors } from "@/lib/author-actions";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -13,39 +14,8 @@ export const metadata: Metadata = {
 };
 
 export default async function AuthorsPage() {
-  // Fetch all approved authors
-  const db = await (await import("@/lib/mongodb")).default;
-  const users = await db
-    .db()
-    .collection("users")
-    .find({ isAuthor: true })
-    .toArray();
-
-  // Fetch author profiles
-  const authorProfiles = users.length
-    ? await db
-        .db()
-        .collection("author_profiles")
-        .find({ userId: { $in: users.map((user) => user._id) } })
-        .toArray()
-    : [];
-
-  // Combine user and profile data
-  const authors = users.map((user) => {
-    const profile = authorProfiles.find(
-      (profile) => profile.userId.toString() === user._id.toString()
-    );
-    return {
-      _id: user._id,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      preNominals: profile?.preNominals || "",
-      middleInitials: profile?.middleInitials || "",
-      countryOfResidence: profile?.countryOfResidence || "",
-      bio: profile?.bio || "",
-      imageUrl: profile?.imageUrl || "",
-    };
-  });
+  
+  const authors = await getAllAuthors();
 
   return (
     <div className="bg-[#f3f2f2] min-h-screen py-12">

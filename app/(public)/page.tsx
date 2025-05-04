@@ -1,13 +1,19 @@
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Play } from "lucide-react"
-import { routes } from "./routes"
-import { FeaturedAuthors } from "@/components/home/featured-authors"
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Play } from "lucide-react";
+import { routes } from "../routes";
+import { FeaturedAuthors } from "@/components/home/featured-authors";
 
 export default async function HomePage() {
   // Fetch featured authors (3 most recent approved authors)
-  const db = await (await import("@/lib/mongodb")).default
-  const users = await db.db().collection("users").find({ isAuthor: true }).sort({ createdAt: -1 }).limit(3).toArray()
+  const db = await (await import("@/lib/mongodb")).default;
+  const users = await db
+    .db()
+    .collection("users")
+    .find({ isAuthor: true })
+    .sort({ createdAt: -1 })
+    .limit(3)
+    .toArray();
 
   // Fetch author profiles
   const authorProfiles = users.length
@@ -16,11 +22,13 @@ export default async function HomePage() {
         .collection("author_profiles")
         .find({ userId: { $in: users.map((user) => user._id) } })
         .toArray()
-    : []
+    : [];
 
   // Combine user and profile data
   const authors = users.map((user) => {
-    const profile = authorProfiles.find((profile) => profile.userId.toString() === user._id.toString())
+    const profile = authorProfiles.find(
+      (profile) => profile.userId.toString() === user._id.toString()
+    );
     return {
       _id: user._id,
       firstName: user.firstName,
@@ -30,8 +38,8 @@ export default async function HomePage() {
       countryOfResidence: profile?.countryOfResidence || "",
       bio: profile?.bio || "",
       imageUrl: profile?.imageUrl || "",
-    }
-  })
+    };
+  }) as any;
 
   const featuredPosts = [
     {
@@ -78,7 +86,7 @@ export default async function HomePage() {
         date: "30 Jan 2022",
       },
     },
-  ]
+  ];
 
   return (
     <div className="bg-[#f3f2f2]">
@@ -87,11 +95,14 @@ export default async function HomePage() {
         <div className="container mx-auto px-4 py-12">
           <div className="grid md:grid-cols-2 gap-8 items-center">
             <div>
-              <h1 className="text-5xl font-bold mb-6">LET'S GET HUMANITY BACK ON TRACK</h1>
+              <h1 className="text-5xl font-bold mb-6">
+                LET'S GET HUMANITY BACK ON TRACK
+              </h1>
               <p className="text-gray-600">
-                Fermentum, ipsum in lacinia tempus, lorem neque tempus nisi, id porta quam quased tortor vitae sem
-                finibus pharetra vitae eget sem. Suspendisse ipsum justo, lobortis auctor sodales in, imperdiet vitae
-                ante.
+                Fermentum, ipsum in lacinia tempus, lorem neque tempus nisi, id
+                porta quam quased tortor vitae sem finibus pharetra vitae eget
+                sem. Suspendisse ipsum justo, lobortis auctor sodales in,
+                imperdiet vitae ante.
               </p>
             </div>
             <div className="relative aspect-video rounded-xl overflow-hidden bg-black">
@@ -125,14 +136,16 @@ export default async function HomePage() {
               <h2 className="text-3xl font-bold mb-6">What are we doing?</h2>
               <div className="space-y-4">
                 <p className="text-gray-600">
-                  Fermentum, ipsum in lacinia tempus, lorem neque tempus nisi, id porta quam quased tortor vitae sem
-                  finibus pharetra vitae eget sem. Suspendisse ipsum justo, lobortis auctor sodales in, imperdiet vitae
-                  ante.
+                  Fermentum, ipsum in lacinia tempus, lorem neque tempus nisi,
+                  id porta quam quased tortor vitae sem finibus pharetra vitae
+                  eget sem. Suspendisse ipsum justo, lobortis auctor sodales in,
+                  imperdiet vitae ante.
                 </p>
                 <p className="text-gray-600">
-                  Fermentum, ipsum in lacinia tempus, lorem neque tempus nisi, id porta quam quased tortor vitae sem
-                  finibus pharetra vitae eget sem. Suspendisse ipsum justo, lobortis auctor sodales in, imperdiet vitae
-                  ante.
+                  Fermentum, ipsum in lacinia tempus, lorem neque tempus nisi,
+                  id porta quam quased tortor vitae sem finibus pharetra vitae
+                  eget sem. Suspendisse ipsum justo, lobortis auctor sodales in,
+                  imperdiet vitae ante.
                 </p>
               </div>
               <div className="mt-6">
@@ -151,15 +164,19 @@ export default async function HomePage() {
           <div className="grid md:grid-cols-2 gap-8 items-center">
             <div>
               <h2 className="text-3xl font-bold uppercase mb-2">QUESTION 1</h2>
-              <h3 className="text-4xl font-bold mb-4">Is humanity on the right track?</h3>
+              <h3 className="text-4xl font-bold mb-4">
+                Is humanity on the right track?
+              </h3>
               <p className="text-gray-600 mb-6">
-                Fermentum, ipsum in lacinia tempus, lorem neque tempus nisi, id porta quam quased tortor vitae sem
-                finibus pharetra vitae eget sem. Suspendisse ipsum justo, lobortis auctor sodales in, imperdiet vitae
-                ante.
+                Fermentum, ipsum in lacinia tempus, lorem neque tempus nisi, id
+                porta quam quased tortor vitae sem finibus pharetra vitae eget
+                sem. Suspendisse ipsum justo, lobortis auctor sodales in,
+                imperdiet vitae ante.
               </p>
               <p className="text-gray-600 mb-6">
-                Fermentum, ipsum in lacinia tempus, lorem neque tempus nisi, id porta quam quased tortor vitae sem
-                finibus pharetra vitae eget sem.
+                Fermentum, ipsum in lacinia tempus, lorem neque tempus nisi, id
+                porta quam quased tortor vitae sem finibus pharetra vitae eget
+                sem.
               </p>
               <Link href={routes.questions.answer("1")}>
                 <Button variant="outline" className="rounded-full">
@@ -184,7 +201,9 @@ export default async function HomePage() {
       {/* Featured Posts Section */}
       <section className="bg-white mt-8">
         <div className="container mx-auto px-4 py-12">
-          <h2 className="text-3xl font-bold mb-8 text-center">Featured Posts</h2>
+          <h2 className="text-3xl font-bold mb-8 text-center">
+            Featured Posts
+          </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {featuredPosts.map((post) => (
               <Link href={`${routes.news.post(post.slug)}`} key={post.id}>
@@ -199,7 +218,8 @@ export default async function HomePage() {
                   <div className="p-4">
                     <h3 className="font-medium mb-2">{post.title}</h3>
                     <p className="text-sm text-gray-500 mb-4">
-                      Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sit quam auctor fermentum...
+                      Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+                      Sit quam auctor fermentum...
                     </p>
                     <div className="flex items-center gap-2">
                       <img
@@ -208,8 +228,12 @@ export default async function HomePage() {
                         className="w-8 h-8 rounded-full"
                       />
                       <div>
-                        <p className="text-xs font-medium">{post.author.name}</p>
-                        <p className="text-xs text-gray-500">{post.author.date}</p>
+                        <p className="text-xs font-medium">
+                          {post.author.name}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {post.author.date}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -229,5 +253,5 @@ export default async function HomePage() {
         </div>
       </section>
     </div>
-  )
+  );
 }

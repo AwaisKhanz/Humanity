@@ -8,6 +8,12 @@ import { useRouter } from "next/navigation";
 import { Search, MoreVertical, Plus, Pencil, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import Link from "next/link";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Question {
   _id: string;
@@ -166,49 +172,42 @@ export default function QuestionsPage() {
                           {new Date(question.createdAt).toLocaleDateString()}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right">
-                          <div className="relative">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="rounded-full"
-                              onClick={() =>
-                                setActiveQuestion(
-                                  activeQuestion === question._id
-                                    ? null
-                                    : question._id
-                                )
-                              }
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="rounded-full"
+                              >
+                                <MoreVertical className="h-5 w-5" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent
+                              align="end"
+                              className="w-48 bg-white"
                             >
-                              <MoreVertical className="h-5 w-5" />
-                            </Button>
-
-                            {activeQuestion === question._id && (
-                              <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10">
-                                <div className="py-1">
-                                  <Link
-                                    href={`/admin/questions/${question._id}/edit`}
-                                  >
-                                    <button className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left">
-                                      <Pencil className="h-4 w-4 mr-2" />
-                                      Edit Question
-                                    </button>
-                                  </Link>
-                                  <button
-                                    className="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-gray-100 w-full text-left"
-                                    onClick={() => deleteQuestion(question._id)}
-                                  >
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    Delete Question
-                                  </button>
-                                  <Link href={`/questions/${question._id}`}>
-                                    <button className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left">
-                                      View Public Page
-                                    </button>
-                                  </Link>
-                                </div>
-                              </div>
-                            )}
-                          </div>
+                              <Link
+                                href={`/admin/questions/${question._id}/edit`}
+                              >
+                                <DropdownMenuItem className="cursor-pointer">
+                                  <Pencil className="h-4 w-4 mr-2" />
+                                  Edit Question
+                                </DropdownMenuItem>
+                              </Link>
+                              <DropdownMenuItem
+                                className="text-red-600 cursor-pointer"
+                                onClick={() => deleteQuestion(question._id)}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete Question
+                              </DropdownMenuItem>
+                              <Link href={`/questions/${question._id}`}>
+                                <DropdownMenuItem className="cursor-pointer">
+                                  View Public Page
+                                </DropdownMenuItem>
+                              </Link>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </td>
                       </tr>
                     ))}

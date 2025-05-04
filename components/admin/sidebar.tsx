@@ -37,11 +37,6 @@ export function Sidebar() {
       icon: Users,
       superAdminOnly: true,
     },
-    {
-      title: "Settings",
-      href: "/admin/settings",
-      icon: Settings,
-    },
   ];
 
   return (

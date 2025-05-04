@@ -5,7 +5,15 @@ if (typeof window !== "undefined") {
 
 import { ObjectId } from "mongodb";
 import clientPromise from "./mongodb";
-import { Answer, AuthorProfile, Job, JobStatus, Question, User } from "./types";
+import {
+  Answer,
+  AuthorProfile,
+  Job,
+  JobStatus,
+  JobType,
+  Question,
+  User,
+} from "./types";
 
 // Export types from types.ts
 export { UserRole, JobType, JobStatus } from "./types";
@@ -161,12 +169,95 @@ class DatabaseService {
     return result.modifiedCount > 0;
   }
 
+  // Get all authors with their profiles
+  async getAllAuthors() {
+    const db = await this.getDb();
+
+    // First get all users who are authors
+    const users = await db
+      .collection(COLLECTIONS.USERS)
+      .find({ isAuthor: true })
+      .toArray();
+
+    console.log(`Found ${users.length} users with isAuthor=true`);
+
+    if (!users.length) return [];
+
+    // Then get their profiles
+    const authorProfiles = await db
+      .collection(COLLECTIONS.AUTHOR_PROFILES)
+      .find({
+        userId: { $in: users.map((user: User) => new ObjectId(user._id)) },
+      })
+      .toArray();
+
+    console.log(`Found ${authorProfiles.length} author profiles`);
+
+    // Combine the data
+    return users.map((user: User) => {
+      const profile = authorProfiles.find(
+        (profile: AuthorProfile) =>
+          profile.userId.toString() === user._id.toString()
+      );
+
+      return {
+        _id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        name: profile?.name || `${user.firstName} ${user.lastName}`,
+        preNominals: profile?.preNominals || "",
+        middleInitials: profile?.middleInitials || "",
+        countryOfResidence: profile?.countryOfResidence || "",
+        bio: profile?.bio || "",
+        imageUrl: profile?.imageUrl || "",
+      };
+    });
+  }
+
   // Author profile methods
   async getAuthorProfileByUserId(userId: string | ObjectId) {
     const db = await this.getDb();
     return db
       .collection(COLLECTIONS.AUTHOR_PROFILES)
       .findOne({ userId: new ObjectId(userId) });
+  }
+
+  async getAuthorAnswers(userId: string | ObjectId) {
+    const db = await this.getDb();
+    return db
+      .collection(COLLECTIONS.ANSWERS)
+      .aggregate([
+        { $match: { userId: new ObjectId(userId) } },
+        {
+          $lookup: {
+            from: "questions",
+            localField: "questionId",
+            foreignField: "_id",
+            as: "question",
+          },
+        },
+        { $unwind: { path: "$question", preserveNullAndEmptyArrays: true } },
+        {
+          $project: {
+            _id: 1,
+            questionId: 1,
+            title: 1,
+            summary: 1,
+            content: 1,
+            likes: 1,
+            status: 1,
+            createdAt: 1,
+            updatedAt: 1,
+            question: {
+              _id: "$question._id",
+              number: "$question.number",
+              title: "$question.title",
+            },
+          },
+        },
+        { $sort: { createdAt: -1 } },
+      ])
+      .toArray();
   }
 
   async createAuthorProfile(
@@ -184,7 +275,6 @@ class DatabaseService {
       .insertOne(newProfile);
     return { ...newProfile, _id: result.insertedId };
   }
-
   async updateAuthorProfile(
     userId: string | ObjectId,
     update: Partial<AuthorProfile>
@@ -209,8 +299,41 @@ class DatabaseService {
     const query = status ? { status } : {};
     return db
       .collection(COLLECTIONS.JOBS)
-      .find(query)
-      .sort({ createdAt: -1 })
+      .aggregate([
+        { $match: query },
+        {
+          $lookup: {
+            from: "users",
+            localField: "userId",
+            foreignField: "_id",
+            as: "user",
+          },
+        },
+        { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
+        {
+          $project: {
+            _id: 1,
+            adminNo: 1,
+            type: 1,
+            status: 1,
+            userId: 1,
+            relatedId: 1,
+            createdAt: 1,
+            updatedAt: 1,
+            user: {
+              $cond: {
+                if: { $and: ["$user", "$user.firstName", "$user.lastName"] },
+                then: {
+                  firstName: "$user.firstName",
+                  lastName: "$user.lastName",
+                },
+                else: null,
+              },
+            },
+          },
+        },
+        { $sort: { createdAt: -1 } },
+      ])
       .toArray();
   }
 
@@ -229,6 +352,8 @@ class DatabaseService {
   async updateJobStatus(id: string | ObjectId, status: JobStatus) {
     const db = await this.getDb();
     const now = new Date();
+
+    // Update job status
     const result = await db.collection(COLLECTIONS.JOBS).updateOne(
       { _id: new ObjectId(id) },
       {
@@ -238,6 +363,25 @@ class DatabaseService {
         },
       }
     );
+
+    // If job is approved and type is new_author, update user's isAuthor
+    if (status === JobStatus.APPROVED) {
+      const job = await db
+        .collection(COLLECTIONS.JOBS)
+        .findOne({ _id: new ObjectId(id) });
+      if (job && job.type === JobType.NEW_AUTHOR) {
+        await db.collection(COLLECTIONS.USERS).updateOne(
+          { _id: new ObjectId(job.userId) },
+          {
+            $set: {
+              isAuthor: true,
+              updatedAt: now,
+            },
+          }
+        );
+      }
+    }
+
     return result.modifiedCount > 0;
   }
 
@@ -245,7 +389,41 @@ class DatabaseService {
     const db = await this.getDb();
     return db
       .collection(COLLECTIONS.JOBS)
-      .findOne({ _id: new ObjectId(jobId) });
+      .aggregate([
+        { $match: { _id: new ObjectId(jobId) } },
+        {
+          $lookup: {
+            from: "users",
+            localField: "userId",
+            foreignField: "_id",
+            as: "user",
+          },
+        },
+        { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
+        {
+          $project: {
+            _id: 1,
+            adminNo: 1,
+            type: 1,
+            status: 1,
+            userId: 1,
+            relatedId: 1,
+            createdAt: 1,
+            updatedAt: 1,
+            user: {
+              $cond: {
+                if: { $and: ["$user", "$user.firstName", "$user.lastName"] },
+                then: {
+                  firstName: "$user.firstName",
+                  lastName: "$user.lastName",
+                },
+                else: null,
+              },
+            },
+          },
+        },
+      ])
+      .next();
   }
 
   // Like methods

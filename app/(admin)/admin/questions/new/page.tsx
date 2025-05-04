@@ -1,8 +1,7 @@
 "use client";
 
 import type React from "react";
-
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/auth-context";
@@ -52,10 +51,12 @@ export default function NewQuestionPage() {
     },
   });
 
-  if (!user || user.role !== UserRole.SUPER_ADMIN) {
-    router.push("/admin");
-    return null;
-  }
+  // Redirect if user is not a super admin
+  useEffect(() => {
+    if (!user || user.role !== UserRole.SUPER_ADMIN) {
+      router.push("/admin");
+    }
+  }, [user, router]);
 
   // Function to handle file upload
   const handleFileUpload = async (file: File, type: "image" | "video") => {
@@ -70,7 +71,9 @@ export default function NewQuestionPage() {
       formData.append("type", type);
 
       // Upload the file
-      const response = await fetch("/api/upload", {
+      const baseUrl =
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+      const response = await fetch(`${baseUrl}/api/upload`, {
         method: "POST",
         body: formData,
       });
@@ -132,7 +135,9 @@ export default function NewQuestionPage() {
     setValue("videoUrl", "");
     setVideoPreview(null);
     if (videoInputRef.current) {
-      videoInputRef.current.value = "";
+      if (videoInputRef.current) {
+        videoInputRef.current.value = "";
+      }
     }
   };
 
@@ -140,7 +145,9 @@ export default function NewQuestionPage() {
     try {
       setIsSubmitting(true);
 
-      const response = await fetch("/api/questions", {
+      const baseUrl =
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+      const response = await fetch(`${baseUrl}/api/questions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -161,6 +168,10 @@ export default function NewQuestionPage() {
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  if (!user || user.role !== UserRole.SUPER_ADMIN) {
+    return null; // Render nothing while redirecting
   }
 
   return (

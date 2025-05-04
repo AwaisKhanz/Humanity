@@ -1,13 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { uploadImage, uploadVideo } from "@/lib/blob-storage";
-import { getUserFromRequest, hasRole } from "@/lib/auth-utils";
-import { UserRole } from "@/lib/types";
+import { getUserFromRequest } from "@/lib/auth-utils";
 
 export async function POST(req: NextRequest) {
   try {
-    // Check if user is authenticated and has admin role
+    // Check if user is authenticated (any user, not just admin)
     const user = getUserFromRequest(req);
-    if (!user || !hasRole(user, [UserRole.ADMIN, UserRole.SUPER_ADMIN])) {
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

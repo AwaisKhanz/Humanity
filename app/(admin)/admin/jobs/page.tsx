@@ -1,14 +1,19 @@
-import { JobList } from "@/components/admin/job-list"
+import { JobListClient } from "@/components/admin/job-list";
+import { getAllJobs } from "@/lib/admin-actions";
 
-export default function JobsPage() {
+export default async function JobsPage() {
+  // Fetch jobs data server-side
+  const jobs = await getAllJobs();
+
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Job Management</h1>
       <p className="text-gray-500">
-        Review and manage pending jobs such as author applications and answer submissions.
+        Review and manage pending jobs such as author applications and answer
+        submissions.
       </p>
 
-      <JobList />
+      <JobListClient jobs={jobs} />
     </div>
-  )
+  );
 }

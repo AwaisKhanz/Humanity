@@ -18,13 +18,14 @@ export async function POST(req: NextRequest) {
       preNominals,
       middleInitials,
       countryOfResidence,
+      name,
       bio,
       links,
       imageUrl,
     } = await req.json();
 
     // Validate input
-    if (!countryOfResidence || !bio) {
+    if (!countryOfResidence || !bio || !name) {
       return NextResponse.json(
         { message: "Missing required fields" },
         { status: 400 }
@@ -42,10 +43,11 @@ export async function POST(req: NextRequest) {
 
     // Create author profile
     const profile = await dbService.createAuthorProfile({
-      userId: user.id,
+      userId: new ObjectId(user.id),
       preNominals,
       middleInitials,
       countryOfResidence,
+      name,
       bio,
       links: links || [],
       imageUrl,
@@ -56,7 +58,7 @@ export async function POST(req: NextRequest) {
       adminNo: `AUTH-${Date.now().toString().slice(-6)}`,
       type: JobType.NEW_AUTHOR,
       status: JobStatus.PENDING,
-      userId: user.id,
+      userId: new ObjectId(user.id),
       relatedId: profile._id,
     });
 
@@ -114,6 +116,7 @@ export async function PUT(req: NextRequest) {
       preNominals,
       middleInitials,
       countryOfResidence,
+      name,
       bio,
       links,
       imageUrl,
@@ -126,7 +129,8 @@ export async function PUT(req: NextRequest) {
       !links &&
       !imageUrl &&
       !preNominals &&
-      !middleInitials
+      !middleInitials &&
+      !name
     ) {
       return NextResponse.json(
         { message: "No fields to update" },
@@ -148,6 +152,7 @@ export async function PUT(req: NextRequest) {
       ...(preNominals !== undefined && { preNominals }),
       ...(middleInitials !== undefined && { middleInitials }),
       ...(countryOfResidence && { countryOfResidence }),
+      ...(name && { name }),
       ...(bio && { bio }),
       ...(links && { links }),
       ...(imageUrl && { imageUrl }),
@@ -165,7 +170,7 @@ export async function PUT(req: NextRequest) {
       adminNo: `PROF-${Date.now().toString().slice(-6)}`,
       type: JobType.PROFILE_UPDATE,
       status: JobStatus.PENDING,
-      userId: user.id,
+      userId: new ObjectId(user.id),
       relatedId: existingProfile._id,
     });
 

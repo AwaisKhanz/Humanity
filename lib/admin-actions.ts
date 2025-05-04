@@ -1,5 +1,6 @@
 "use server";
 
+import { ObjectId } from "mongodb";
 import { dbService } from "./db-service";
 import type { Job, JobStatus } from "./types";
 
@@ -7,6 +8,8 @@ import type { Job, JobStatus } from "./types";
 export async function getRecentJobs(limit = 5): Promise<Job[]> {
   try {
     const jobs = await dbService.getJobs();
+
+    console.log(jobs);
     return jobs.slice(0, limit);
   } catch (error) {
     console.error("Error fetching recent jobs:", error);
@@ -26,7 +29,7 @@ export async function getAllJobs(): Promise<Job[]> {
 
 // Update job status
 export async function updateJobStatus(
-  jobId: string,
+  jobId: string | ObjectId,
   status: JobStatus
 ): Promise<boolean> {
   try {

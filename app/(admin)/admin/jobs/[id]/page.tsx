@@ -39,7 +39,7 @@ export default async function JobDetailPage({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <h3 className="text-sm font-medium text-gray-500">Job ID</h3>
-              <p>{job._id}</p>
+              <p>{typeof job._id === "string" && job._id}</p>
             </div>
             <div>
               <h3 className="text-sm font-medium text-gray-500">
@@ -73,7 +73,7 @@ export default async function JobDetailPage({
               </h3>
               <p>
                 {job.user
-                  ? `${job.user.firstName} ${job.user.lastName} (${job.user.email})`
+                  ? `${job.user.firstName} ${job.user.lastName} `
                   : "Unknown"}
               </p>
             </div>

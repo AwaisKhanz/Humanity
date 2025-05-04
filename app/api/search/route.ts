@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
 
     // Search questions if no type filter or type is "question"
     if (!type || type === "question") {
-      let questions = [];
+      let questions = [] as any;
       if (await collectionExists("questions")) {
         questions = await db
           .collection("questions")
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
           : questions.length;
 
       results.push(
-        ...questions.map((q) => ({
+        ...questions.map((q: any) => ({
           id: q._id.toString(),
           type: "question",
           title: q.title,
@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
 
     // Search answers if no type filter or type is "answer"
     if (!type || type === "answer") {
-      let answers = [];
+      let answers = [] as any;
       if (await collectionExists("answers")) {
         answers = await db
           .collection("answers")
@@ -125,7 +125,7 @@ export async function GET(request: NextRequest) {
           : answers.length;
 
       results.push(
-        ...answers.map((a) => ({
+        ...answers.map((a: any) => ({
           id: a._id.toString(),
           type: "answer",
           title: a.title || "Answer",
@@ -147,7 +147,7 @@ export async function GET(request: NextRequest) {
 
     // Search author profiles if no type filter or type is "author"
     if (!type || type === "author") {
-      let authorProfiles = [];
+      let authorProfiles = [] as any;
       if (await collectionExists("author_profiles")) {
         authorProfiles = await db
           .collection("author_profiles")
@@ -193,7 +193,7 @@ export async function GET(request: NextRequest) {
           : authorProfiles.length;
 
       results.push(
-        ...authorProfiles.map((a) => ({
+        ...authorProfiles.map((a: any) => ({
           id: a._id.toString(),
           type: "author",
           title: `${a.firstName} ${a.lastName}`,
