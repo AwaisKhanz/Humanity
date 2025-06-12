@@ -1,57 +1,81 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { dbService } from "@/lib/db-service"
-import { getUserFromRequest } from "@/lib/auth-utils"
+// app/api/questions/[questionId]/answers/[answerId]/like/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { dbService } from "@/lib/db-service";
+import { getUserFromRequest } from "@/lib/auth-utils";
+import { ObjectId } from "mongodb";
 
-// POST like an answer
-export async function POST(req: NextRequest, { params }: { params: { questionId: string; answerId: string } }) {
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ questionId: string; answerId: string }> }
+) {
   try {
-    const user = getUserFromRequest(req)
+    const { answerId } = await params;
+    const user = getUserFromRequest(req);
 
-    // Check if user is authenticated
     if (!user) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if answer exists and is approved
-    const answer = await dbService.getAnswerById(params.answerId)
+    const answer = await dbService.getAnswerById(answerId);
     if (!answer) {
-      return NextResponse.json({ message: "Answer not found" }, { status: 404 })
+      return NextResponse.json(
+        { message: "Answer not found" },
+        { status: 404 }
+      );
     }
 
-    // Like the answer
-    const success = await dbService.likeAnswer(user.id, params.answerId)
-
+    const success = await dbService.likeAnswer(user.id, answerId);
     if (!success) {
-      return NextResponse.json({ message: "You have already liked this answer" }, { status: 400 })
+      return NextResponse.json(
+        { message: "Answer already liked" },
+        { status: 400 }
+      );
     }
 
-    return NextResponse.json({ message: "Answer liked successfully" })
+    return NextResponse.json({ message: "Answer liked successfully" });
   } catch (error) {
-    console.error("Error liking answer:", error)
-    return NextResponse.json({ message: "Failed to like answer" }, { status: 500 })
+    console.error("Error liking answer:", error);
+    return NextResponse.json(
+      { message: "Failed to like answer" },
+      { status: 500 }
+    );
   }
 }
 
-// DELETE unlike an answer
-export async function DELETE(req: NextRequest, { params }: { params: { questionId: string; answerId: string } }) {
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ questionId: string; answerId: string }> }
+) {
   try {
-    const user = getUserFromRequest(req)
+    const { answerId } = await params;
+    const user = getUserFromRequest(req);
 
-    // Check if user is authenticated
     if (!user) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    // Unlike the answer
-    const success = await dbService.unlikeAnswer(user.id, params.answerId)
+    const answer = await dbService.getAnswerById(answerId);
+    if (!answer) {
+      return NextResponse.json(
+        { message: "Answer not found" },
+        { status: 404 }
+      );
+    }
 
+    const success = await dbService.unlikeAnswer(user.id, answerId);
     if (!success) {
-      return NextResponse.json({ message: "You have not liked this answer" }, { status: 400 })
+      return NextResponse.json(
+        { message: "Answer not liked" },
+        { status: 400 }
+      );
     }
 
-    return NextResponse.json({ message: "Answer unliked successfully" })
+    return NextResponse.json({ message: "Answer unliked successfully" });
   } catch (error) {
-    console.error("Error unliking answer:", error)
-    return NextResponse.json({ message: "Failed to unlike answer" }, { status: 500 })
+    console.error("Error unliking answer:", error);
+    return NextResponse.json(
+      { message: "Failed to unlike answer" },
+      { status: 500 }
+    );
   }
 }

@@ -1,107 +1,66 @@
-import { type NextRequest, NextResponse } from "next/server";
+// app/api/questions/[questionId]/answers/[answerId]/route.ts
+import { NextRequest, NextResponse } from "next/server";
 import { dbService } from "@/lib/db-service";
-import { Answer, JobStatus, JobType } from "@/lib/types";
-import { getUserFromRequest } from "@/lib/auth-utils";
 import { ObjectId } from "mongodb";
 
-// GET answers for a question
 export async function GET(
   req: NextRequest,
-  { params }: { params: { questionId: string } }
+  { params }: { params: Promise<{ questionId: string; answerId: string }> }
 ) {
   try {
-    // Get answers
-    const answers = await dbService.getAnswersByQuestionId(params.questionId);
+    const { questionId, answerId } = await params;
+    const answer = await dbService.getAnswerById(answerId);
 
-    // Fetch user data for each answer
-    const answersWithUsers = await Promise.all(
-      answers.map(async (answer: Answer) => {
-        const answerUser = await dbService.getUserById(answer.userId);
-        const authorProfile = answerUser?.isAuthor
-          ? await dbService.getAuthorProfileByUserId(answer.userId)
-          : null;
-
-        return {
-          ...answer,
-          user: answerUser
-            ? {
-                _id: answerUser._id,
-                firstName: answerUser.firstName,
-                lastName: answerUser.lastName,
-                isAuthor: answerUser.isAuthor,
-              }
-            : null,
-          authorProfile,
-        };
-      })
-    );
-
-    return NextResponse.json(answersWithUsers);
-  } catch (error) {
-    console.error("Error fetching answers:", error);
-    return NextResponse.json(
-      { message: "Failed to fetch answers" },
-      { status: 500 }
-    );
-  }
-}
-
-// POST new answer
-export async function POST(
-  req: NextRequest,
-  { params }: { params: { questionId: string } }
-) {
-  try {
-    const user = getUserFromRequest(req);
-
-    // Check if user is authenticated
-    if (!user) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
-
-    const { title, summary, content } = await req.json();
-
-    // Validate input
-    if (!summary || !content) {
+    if (!answer || answer.questionId.toString() !== questionId) {
       return NextResponse.json(
-        { message: "Missing required fields" },
-        { status: 400 }
-      );
-    }
-
-    // Check if question exists
-    const question = await dbService.getQuestionById(params.questionId);
-    if (!question) {
-      return NextResponse.json(
-        { message: "Question not found" },
+        { message: "Answer not found" },
         { status: 404 }
       );
     }
 
-    // Create answer
-    const answer = await dbService.createAnswer({
-      questionId: params.questionId,
-      userId: user.id,
-      title,
-      summary,
-      content,
-      status: JobStatus.PENDING,
-    });
+    const answerUser = await dbService.getUserById(answer.userId);
+    const authorProfile = answerUser?.isAuthor
+      ? await dbService.getAuthorProfileByUserId(answer.userId)
+      : null;
 
-    // Create job for admin approval
-    await dbService.createJob({
-      adminNo: `ANS-${Date.now().toString().slice(-6)}`,
-      type: JobType.ANSWER_SUBMISSION,
-      status: JobStatus.PENDING,
-      userId: user.id,
-      relatedId: answer._id,
-    });
+    const serializedAnswer = {
+      _id: answer._id.toString(),
+      questionId: answer.questionId.toString(),
+      userId: answer.userId.toString(),
+      title: answer.title,
+      summary: answer.summary,
+      content: answer.content,
+      status: answer.status,
+      likes: answer.likes,
+      createdAt: answer.createdAt.toISOString(),
+      updatedAt: answer.updatedAt.toISOString(),
+      user: answerUser
+        ? {
+            _id: answerUser._id.toString(),
+            firstName: answerUser.firstName,
+            lastName: answerUser.lastName,
+            isAuthor: answerUser.isAuthor,
+          }
+        : null,
+      authorProfile: authorProfile
+        ? {
+            _id: authorProfile._id.toString(),
+            imageUrl: authorProfile.imageUrl,
+            name: authorProfile.name,
+            countryOfResidence: authorProfile.countryOfResidence,
+            preNominals: authorProfile.preNominals,
+            middleInitials: authorProfile.middleInitials,
+            bio: authorProfile.bio,
+            links: authorProfile.links,
+          }
+        : null,
+    };
 
-    return NextResponse.json(answer, { status: 201 });
+    return NextResponse.json(serializedAnswer);
   } catch (error) {
-    console.error("Error creating answer:", error);
+    console.error("Error fetching answer:", error);
     return NextResponse.json(
-      { message: "Failed to create answer" },
+      { message: "Failed to fetch answer" },
       { status: 500 }
     );
   }

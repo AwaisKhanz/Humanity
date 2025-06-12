@@ -79,19 +79,19 @@ export interface Answer {
 
 // Job interface
 export interface Job {
-  _id: string | ObjectId;
+  _id?: string | ObjectId;
   adminNo: string;
   type: JobType;
   status: JobStatus;
   userId: string | ObjectId;
-  relatedId?: string;
-  createdAt: Date;
-  updatedAt: Date;
+  relatedId?: string | ObjectId;
+  createdAt: string | Date;
+  updatedAt: string | Date;
   user?: {
     firstName: string;
     lastName: string;
-    email: string;
-  };
+  } | null;
+  relatedData?: any;
 }
 
 // Like interface

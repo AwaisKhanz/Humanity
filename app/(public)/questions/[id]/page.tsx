@@ -1,38 +1,95 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { QuestionCard } from "@/components/questions/question-card";
 import { AnswerCard } from "@/components/answers/answer-card";
 import { Button } from "@/components/ui/button";
-import { notFound } from "next/navigation";
+import { useAuth } from "@/contexts/auth-context";
+import { UserRole } from "@/lib/types";
 
-interface QuestionPageProps {
-  params: {
-    id: string;
+export default function QuestionPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const id = params?.id;
+  const { user } = useAuth();
+  const isAdmin =
+    user &&
+    (user.role === UserRole.ADMIN || user.role === UserRole.SUPER_ADMIN);
+  const [question, setQuestion] = useState<any>(null);
+  const [answers, setAnswers] = useState<any[]>([]);
+  const [sort, setSort] = useState<"likes" | "recent">("likes");
+  const [status, setStatus] = useState<"approved" | "all">("approved");
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        setIsLoading(true);
+        const baseUrl =
+          process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+        const headers: HeadersInit = user?.token
+          ? { Authorization: `Bearer ${user.token}` }
+          : {};
+
+        // Fetch question
+        const questionResponse = await fetch(`${baseUrl}/api/questions/${id}`, {
+          cache: "no-store",
+          headers,
+        });
+
+        if (!questionResponse.ok) {
+          throw new Error("Question not found");
+        }
+
+        const questionData = await questionResponse.json();
+        setQuestion(questionData);
+
+        // Fetch answers
+        const answersResponse = await fetch(
+          `${baseUrl}/api/questions/${id}/answers?sort=${sort}&status=${
+            isAdmin ? status : "approved"
+          }`,
+          { cache: "no-store", headers }
+        );
+
+        if (!answersResponse.ok) {
+          throw new Error("Failed to fetch answers");
+        }
+
+        const answersData = await answersResponse.json();
+        setAnswers(answersData);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchData();
+  }, [id, sort, status, user]);
+
+  const handleTopRated = () => setSort("likes");
+  const handleViewAll = () => {
+    setSort("recent");
+    if (isAdmin) setStatus("all");
   };
-}
 
-export default async function QuestionPage({ params }: QuestionPageProps) {
-  // Fetch question data
-  const questionResponse = await fetch(
-    `${
-      process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
-    }/api/questions/${params.id}`,
-    { cache: "no-store" }
-  );
-
-  if (!questionResponse.ok) {
-    notFound();
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-12 text-center">Loading...</div>
+    );
   }
 
-  const question = await questionResponse.json();
-
-  // Fetch answers for this question
-  const answersResponse = await fetch(
-    `${
-      process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
-    }/api/questions/${params.id}/answers`,
-    { cache: "no-store" }
-  );
-  const answers = await answersResponse.json();
+  if (!question) {
+    return (
+      <div className="container mx-auto px-4 py-12 text-center">
+        Question not found
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-12 max-w-5xl">
@@ -55,10 +112,20 @@ export default async function QuestionPage({ params }: QuestionPageProps) {
             Answers to Question {question.number}
           </h2>
           <div className="flex gap-2">
-            <Button variant="default" className="rounded-full">
+            <Button
+              variant={sort === "likes" ? "default" : "outline"}
+              className="rounded-full"
+              onClick={handleTopRated}
+            >
               Top Rated
             </Button>
-            <Button variant="outline" className="rounded-full">
+            <Button
+              variant={
+                status === "all" && sort === "recent" ? "default" : "outline"
+              }
+              className="rounded-full"
+              onClick={handleViewAll}
+            >
               View All
             </Button>
           </div>
@@ -76,7 +143,7 @@ export default async function QuestionPage({ params }: QuestionPageProps) {
                   name={`${answer.user?.firstName || ""} ${
                     answer.user?.lastName || ""
                   }`}
-                  id={`Q${question.number}-${answer._id.toString().slice(-6)}`}
+                  id={`Q${question.number}-${answer._id.slice(-6)}`}
                   likes={answer.likes}
                   avatarUrl={
                     answer.authorProfile?.imageUrl ||

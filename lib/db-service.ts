@@ -120,6 +120,7 @@ class DatabaseService {
   // Answer methods
   async getAnswersByQuestionId(questionId: string | ObjectId) {
     const db = await this.getDb();
+
     return db
       .collection(COLLECTIONS.ANSWERS)
       .find({
@@ -387,7 +388,7 @@ class DatabaseService {
 
   async getJobById(jobId: string | ObjectId) {
     const db = await this.getDb();
-    return db
+    const job = await db
       .collection(COLLECTIONS.JOBS)
       .aggregate([
         { $match: { _id: new ObjectId(jobId) } },
@@ -424,6 +425,60 @@ class DatabaseService {
         },
       ])
       .next();
+
+    if (!job || !job.relatedId) {
+      return job;
+    }
+
+    // Fetch related data based on job type
+    let relatedData = null;
+    if (
+      job.type === JobType.NEW_AUTHOR ||
+      job.type === JobType.PROFILE_UPDATE
+    ) {
+      relatedData = await db
+        .collection(COLLECTIONS.AUTHOR_PROFILES)
+        .findOne({ _id: new ObjectId(job.relatedId) });
+    } else if (job.type === JobType.ANSWER_SUBMISSION) {
+      const answer = await db
+        .collection(COLLECTIONS.ANSWERS)
+        .aggregate([
+          { $match: { _id: new ObjectId(job.relatedId) } },
+          {
+            $lookup: {
+              from: "questions",
+              localField: "questionId",
+              foreignField: "_id",
+              as: "question",
+            },
+          },
+          { $unwind: { path: "$question", preserveNullAndEmptyArrays: true } },
+          {
+            $project: {
+              _id: 1,
+              title: 1,
+              summary: 1,
+              content: 1,
+              likes: 1,
+              status: 1,
+              createdAt: 1,
+              updatedAt: 1,
+              question: {
+                _id: "$question._id",
+                number: "$question.number",
+                title: "$question.title",
+              },
+            },
+          },
+        ])
+        .next();
+      relatedData = answer;
+    }
+
+    return {
+      ...job,
+      relatedData,
+    };
   }
 
   // Like methods

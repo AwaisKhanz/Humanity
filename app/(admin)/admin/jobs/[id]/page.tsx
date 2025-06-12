@@ -6,9 +6,10 @@ import { formatDate } from "@/lib/format-utils";
 export default async function JobDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const job = await getJobById(params.id);
+  const { id } = await params; // Await params
+  const job = await getJobById(id);
 
   if (!job) {
     notFound();
@@ -37,15 +38,15 @@ export default async function JobDetailPage({
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
+            {/* <div>
               <h3 className="text-sm font-medium text-gray-500">Job ID</h3>
-              <p>{typeof job._id === "string" && job._id}</p>
-            </div>
+              <p>{job._id || "N/A"}</p>
+            </div> */}
             <div>
               <h3 className="text-sm font-medium text-gray-500">
                 Admin Number
               </h3>
-              <p>{job.adminNo}</p>
+              <p>{job.adminNo || "N/A"}</p>
             </div>
             <div>
               <h3 className="text-sm font-medium text-gray-500">Type</h3>
@@ -72,8 +73,8 @@ export default async function JobDetailPage({
                 Submitted By
               </h3>
               <p>
-                {job.user
-                  ? `${job.user.firstName} ${job.user.lastName} `
+                {job.user?.firstName && job.user?.lastName
+                  ? `${job.user.firstName} ${job.user.lastName}`
                   : "Unknown"}
               </p>
             </div>
@@ -84,6 +85,108 @@ export default async function JobDetailPage({
               <p>{formatDate(job.createdAt)}</p>
             </div>
           </div>
+
+          {job.relatedData && (
+            <div className="mt-6">
+              <h3 className="text-lg font-medium mb-4">Related Data</h3>
+              {job.type === "new_author" || job.type === "profile_update" ? (
+                <div className="space-y-2">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">
+                      Author Name
+                    </h4>
+                    <p>{job.relatedData.name || "N/A"}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">
+                      Pre-Nominals
+                    </h4>
+                    <p>{job.relatedData.preNominals || "N/A"}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">
+                      Middle Initials
+                    </h4>
+                    <p>{job.relatedData.middleInitials || "N/A"}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">
+                      Country of Residence
+                    </h4>
+                    <p>{job.relatedData.countryOfResidence || "N/A"}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Bio</h4>
+                    <p>{job.relatedData.bio || "N/A"}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Links</h4>
+                    <p>
+                      {job.relatedData.links && job.relatedData.links.length > 0
+                        ? job.relatedData.links.join(", ")
+                        : "N/A"}
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">
+                      Image URL
+                    </h4>
+                    {job.relatedData.imageUrl ? (
+                      <a
+                        href={job.relatedData.imageUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline"
+                      >
+                        View Image
+                      </a>
+                    ) : (
+                      <p>N/A</p>
+                    )}
+                  </div>
+                </div>
+              ) : job.type === "answer_submission" ? (
+                <div className="space-y-2">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">
+                      Question Title
+                    </h4>
+                    <p>{job.relatedData.question?.title || "N/A"}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">
+                      Question Number
+                    </h4>
+                    <p>{job.relatedData.question?.number || "N/A"}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">
+                      Question Description
+                    </h4>
+                    <p>{job.relatedData.question?.description || "N/A"}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">
+                      Answer Title
+                    </h4>
+                    <p>{job.relatedData.title || "N/A"}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">
+                      Answer Summary
+                    </h4>
+                    <p>{job.relatedData.summary || "N/A"}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">
+                      Answer Content
+                    </h4>
+                    <p>{job.relatedData.content || "N/A"}</p>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

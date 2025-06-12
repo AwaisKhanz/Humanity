@@ -44,7 +44,35 @@ export async function updateJobStatus(
 // Get job by ID
 export async function getJobById(jobId: string): Promise<Job | null> {
   try {
-    return await dbService.getJobById(jobId);
+    const job = await dbService.getJobById(jobId);
+    if (!job) {
+      return null;
+    }
+    // Serialize ObjectId and Date fields
+    return {
+      ...job,
+      _id: job._id?.toString(),
+      userId: job.userId?.toString(),
+      relatedId: job.relatedId?.toString(),
+      createdAt: job.createdAt.toISOString(),
+      updatedAt: job.updatedAt.toISOString(),
+      relatedData: job.relatedData
+        ? {
+            ...job.relatedData,
+            _id: job.relatedData._id?.toString(),
+            userId: job.relatedData.userId?.toString(),
+            questionId: job.relatedData.questionId?.toString(),
+            createdAt: job.relatedData.createdAt?.toISOString(),
+            updatedAt: job.relatedData.updatedAt?.toISOString(),
+            question: job.relatedData.question
+              ? {
+                  ...job.relatedData.question,
+                  _id: job.relatedData.question._id?.toString(),
+                }
+              : undefined,
+          }
+        : undefined,
+    };
   } catch (error) {
     console.error("Error fetching job by ID:", error);
     return null;
