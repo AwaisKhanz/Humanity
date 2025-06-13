@@ -1,20 +1,78 @@
-"use client"
+"use client";
 import { MessageCircle, Users, ArrowRight, Clock } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import { useEffect, useState } from "react";
 
-export default async function QuestionsClientPage() {
-  const response = await fetch(
-    `${
-      process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
-    }/api/questions`,
-    {
-      cache: "no-store",
-    }
-  );
-  const questions = await response.json();
+interface Question {
+  _id: string;
+  number: number;
+  title: string;
+  description: string;
+  imageUrl?: string;
+}
+
+export default function QuestionsClientPage() {
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchQuestions = async () => {
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"}/api/questions`,
+          {
+            cache: "no-store",
+          }
+        );
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        setQuestions(data);
+      } catch (err) {
+        console.error("Error fetching questions:", err);
+        setError("Failed to load questions. Please try again later.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchQuestions();
+  }, []); // Empty dependency array ensures this runs only once on mount
 
   const featuredQuestion = questions.length > 0 ? questions[0] : null;
+
+  if (loading) {
+    return (
+      <div className="bg-gradient-to-b from-gray-50 to-gray-100 min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading questions...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-gradient-to-b from-gray-50 to-gray-100 min-h-screen flex items-center justify-center">
+        <div className="bg-white p-8 rounded-lg shadow-md max-w-md text-center">
+          <h2 className="text-2xl font-bold text-red-600 mb-4">Error</h2>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-gradient-to-b from-gray-50 to-gray-100 min-h-screen">
@@ -45,9 +103,10 @@ export default async function QuestionsClientPage() {
                     alt={featuredQuestion.title}
                     fill
                     className="object-cover"
+                    priority // Prioritize loading the featured image
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex flex-col justify-end p-8">
-                    <span className=" text-white  py-1 rounded-full text-sm font-medium inline-block mb-3">
+                    <span className="text-white py-1 rounded-full text-sm font-medium inline-block mb-3">
                       Question {featuredQuestion.number}
                     </span>
                     <h3 className="text-3xl font-bold text-white mb-2">
@@ -56,20 +115,6 @@ export default async function QuestionsClientPage() {
                     <p className="text-white/90 mb-4 line-clamp-2">
                       {featuredQuestion.description}
                     </p>
-                    {/* <div className="flex items-center gap-6 text-white/80">
-                      <div className="flex items-center gap-2">
-                        <MessageCircle size={16} />
-                        <span>12 Answers</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Users size={16} />
-                        <span>Expert Contributors</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Clock size={16} />
-                        <span>Updated Recently</span>
-                      </div>
-                    </div> */}
                   </div>
                 </div>
               </div>
@@ -85,7 +130,7 @@ export default async function QuestionsClientPage() {
 
           {questions.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {questions.map((question: any) => (
+              {questions.map((question) => (
                 <Link
                   href={`/questions/${question._id}`}
                   key={question._id}
